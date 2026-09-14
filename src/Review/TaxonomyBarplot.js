@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo, useRef } from "react";
-import { Row, Col, Spin, Select, Checkbox, Typography } from "antd";
+import { Row, Col, Spin, Select, Checkbox, Typography, Empty } from "antd";
 import axios from "axios";
 import Highcharts from "highcharts";
 import config from "../config";
@@ -21,7 +21,7 @@ const configOptions = [
 // Kingdom is deliberately absent: it is offered by neither the review nor the dashboard view
 const DEFAULT_RANKS = ['phylum', 'class', 'order', 'family', 'genus'];
 
-const TaxonomyBarplot = ({ dataset, onSampleClick, selectedSample, taxonomyDataMap, taxonomyBySampleDataMap, taxonomyLoading: loading, ranks }) => {
+const TaxonomyBarplot = ({ dataset, onSampleClick, selectedSample, taxonomyDataMap, taxonomyBySampleDataMap, taxonomyLoading: loading, ranks, unavailableMessage }) => {
     // A dataset determined only to family and genus has no data for the higher ranks, so the
     // caller may restrict the selector to what it actually holds. Defaults to the full list,
     // which is what the review page passes.
@@ -177,6 +177,20 @@ const TaxonomyBarplot = ({ dataset, onSampleClick, selectedSample, taxonomyDataM
 
         setOptions(options)
 
+    }
+
+    // The chart is only built once the data map arrives, so !options on its own cannot tell
+    // "still building" from "the data was refused". /data/taxonomy answers 413 for datasets
+    // over the cardinality limit, and without this the spinner ran forever.
+    const hasData = !!taxonomyDataMap && Object.keys(taxonomyDataMap).length > 0;
+
+    if (!loading && !hasData) {
+        return (
+            <Empty
+                style={{ padding: "48px" }}
+                description={unavailableMessage || "The taxonomy chart is not available for this dataset"}
+            />
+        );
     }
 
     return loading || !options ? (
